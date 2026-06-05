@@ -1,0 +1,159 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>SMART AIRFLOW</title>
+
+    <link rel="stylesheet" href="/static/style.css">
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    >
+
+</head>
+<script src="https://cdn.jsdelivr.net/npm/particles.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<body>
+    <div id="particles-js"></div>
+
+    <div class="grid-bg"></div>
+
+    <div class="background-glow"></div>
+
+    <div class="container">
+
+        <div class="topbar">
+
+            <div class="logo-area">
+
+                <img src="/static/img/logo.png" class="logo-img">
+
+                <h1>
+                    SMART AIRFLOW
+                </h1>
+
+            </div>
+
+            <div class="online" id="statusArduino">
+
+                <span class="pulse"></span>
+
+                VERIFICANDO...
+
+            </div>
+
+        </div>
+
+        <div class="dashboard">
+
+            <!-- CARD RPM -->
+
+            <div class="card rpm-card">
+
+                <h2>VELOCIDADE</h2>
+
+                <div class="gauge">
+
+                    <div class="gauge-inner">
+
+                        <span id="rpmValue">
+                            10
+                        </span>
+
+                        <small>RPM</small>
+
+                    </div>
+
+                </div>
+
+                <input
+                    type="range"
+                    min="5"
+                    max="20"
+                    value="10"
+                    id="sliderVelocidade"
+                    oninput="alterarVelocidade(this.value)"
+                >
+
+            </div>
+
+            <!-- CARD MODO -->
+
+            <div class="card mode-card">
+
+                <h2>MODO</h2>
+
+                <div id="modo-texto" class="modo">
+                    MANUAL
+                </div>
+
+                <div class="buttons-grid">
+
+                    <button onclick="stepMotor('UP')">
+                        <i class="fa-solid fa-arrow-up"></i>
+                    </button>
+
+                    <button onclick="stepMotor('DOWN')">
+                        <i class="fa-solid fa-arrow-down"></i>
+                    </button>
+
+                    <button onclick="ativarAuto()">
+                        <i class="fa-solid fa-fan"></i>
+                    </button>
+
+                    <button onclick="desativarAuto()">
+                        <i class="fa-solid fa-hand"></i>
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- FLUXO DE AR -->
+
+        <div class="airflow-card">
+
+            <div class="fan-area">
+
+                <div class="fan"></div>
+
+                <div class="air air1"></div>
+                <div class="air air2"></div>
+                <div class="air air3"></div>
+
+            </div>
+
+        </div>
+
+        <!-- EMERGÊNCIA -->
+
+        <button class="emergencia" onclick="enviar('STOP')">
+
+            <i class="fa-solid fa-triangle-exclamation"></i>
+
+            EMERGÊNCIA
+
+        </button>
+
+    </div>
+
+    <canvas id="bgCanvas"></canvas>
+
+    <div id="notificacoes"></div>
+
+    <script src="/static/script.js"></script>
+
+</body>
+
+</html>
