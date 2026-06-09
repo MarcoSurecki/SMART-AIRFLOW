@@ -6,37 +6,72 @@ import time
 app = Flask(__name__)
 
 arduino = None
-latest_data = "INIT"
+latest_data = "SMART AIRFLOW"
 connection_status = False
 
-# 🔌 conexão serial
-try:
-    arduino = serial.Serial('COM9', 9600, timeout=1)
-    connection_status = True
-    print("Arduino conectado")
-except Exception as e:
-    print("Erro serial:", e)
+PORTA = "COM9"
+BAUDRATE = 9600
 
 
-# 🔁 leitura contínua do Arduino (ESSENCIAL)
-def read_serial():
-    global latest_data, connection_status
+def conectar_arduino():
+    global arduino, connection_status
+
+    try:
+        arduino = serial.Serial(PORTA, BAUDRATE, timeout=1)
+        connection_status = True
+        print(f"Arduino conectado em {PORTA}")
+        return True
+
+    except Exception as e:
+        connection_status = False
+        arduino = None
+        print("Arduino offline:", e)
+        return False
+
+
+def monitor_serial():
+    global latest_data, connection_status, arduino
 
     while True:
-        if arduino and arduino.is_open:
-            try:
-                line = arduino.readline().decode().strip()
-                if line:
-                    latest_data = line
+
+        # tenta reconectar
+        if arduino is None or not arduino.is_open:
+            conectar_arduino()
+            time.sleep(2)
+            continue
+
+        try:
+
+            if arduino.in_waiting:
+
+                linha = arduino.readline().decode(
+                    errors='ignore'
+                ).strip()
+
+                if linha:
+                    latest_data = linha
                     connection_status = True
+
+        except Exception as e:
+
+            print("Perda de conexão:", e)
+
+            connection_status = False
+
+            try:
+                arduino.close()
             except:
-                connection_status = False
+                pass
+
+            arduino = None
+
         time.sleep(0.1)
 
 
-if arduino:
-    thread = threading.Thread(target=read_serial, daemon=True)
-    thread.start()
+threading.Thread(
+    target=monitor_serial,
+    daemon=True
+).start()
 
 
 @app.route('/')
@@ -44,35 +79,52 @@ def home():
     return render_template('index.html')
 
 
-# 📡 comando para Arduino
 @app.route('/comando', methods=['POST'])
 def comando():
-    cmd = request.form['cmd']
-    print(f'Comando: {cmd}')
 
-    if arduino and arduino.is_open:
-        arduino.write((cmd + '\n').encode())
+    global connection_status
 
-    return 'OK'
+    cmd = request.form.get('cmd')
+
+    print("Comando:", cmd)
+
+    try:
+
+        if arduino and arduino.is_open:
+
+            arduino.write(
+                (cmd + '\n').encode()
+            )
+
+            return 'OK'
+
+    except Exception as e:
+
+        print("Erro envio:", e)
+
+        connection_status = False
+
+    return 'ERRO'
 
 
-# 📊 STATUS GERAL (SCADA)
 @app.route('/status')
 def status():
+
     return jsonify({
         "online": connection_status
     })
 
 
-# 📊 DADOS EM TEMPO REAL (SCADA PRINCIPAL)
 @app.route('/data')
 def data():
+
     return jsonify({
         "status": latest_data
     })
 
 
 if __name__ == '__main__':
+
     app.run(
         host='0.0.0.0',
         port=5000,

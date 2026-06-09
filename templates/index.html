@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-br">
 
@@ -12,17 +11,16 @@
 
     <link rel="stylesheet" href="/static/style.css">
 
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-    >
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 </head>
-<script src="https://cdn.jsdelivr.net/npm/particles.js"></script>
 
+<script src="https://cdn.jsdelivr.net/npm/particles.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <body>
+
     <div id="particles-js"></div>
 
     <div class="grid-bg"></div>
@@ -37,9 +35,7 @@
 
                 <img src="/static/img/logo.png" class="logo-img">
 
-                <h1>
-                    SMART AIRFLOW
-                </h1>
+                <h1>SMART AIRFLOW</h1>
 
             </div>
 
@@ -55,7 +51,7 @@
 
         <div class="dashboard">
 
-            <!-- CARD RPM -->
+            <!-- VELOCIDADE -->
 
             <div class="card rpm-card">
 
@@ -65,9 +61,7 @@
 
                     <div class="gauge-inner">
 
-                        <span id="rpmValue">
-                            10
-                        </span>
+                        <span id="rpmValue">10</span>
 
                         <small>RPM</small>
 
@@ -86,7 +80,7 @@
 
             </div>
 
-            <!-- CARD MODO -->
+            <!-- CONTROLE -->
 
             <div class="card mode-card">
 
@@ -98,20 +92,36 @@
 
                 <div class="buttons-grid">
 
-                    <button onclick="stepMotor('UP')">
+                    <!-- SUBIR -->
+
+                    <button class="manual-only" onclick="subirAleta()">
+
                         <i class="fa-solid fa-arrow-up"></i>
+
                     </button>
 
-                    <button onclick="stepMotor('DOWN')">
+                    <!-- DESCER -->
+
+                    <button class="manual-only" onclick="descerAleta()">
+
                         <i class="fa-solid fa-arrow-down"></i>
+
                     </button>
+
+                    <!-- AUTO -->
 
                     <button onclick="ativarAuto()">
+
                         <i class="fa-solid fa-fan"></i>
+
                     </button>
 
+                    <!-- MANUAL -->
+
                     <button onclick="desativarAuto()">
+
                         <i class="fa-solid fa-hand"></i>
+
                     </button>
 
                 </div>
@@ -120,7 +130,7 @@
 
         </div>
 
-        <!-- FLUXO DE AR -->
+        <!-- ANIMAÇÃO -->
 
         <div class="airflow-card">
 
@@ -136,15 +146,22 @@
 
         </div>
 
-        <!-- EMERGÊNCIA -->
+        <!-- BOTÕES INFERIORES -->
 
-        <button class="emergencia" onclick="enviar('STOP')">
+        <div style="display:flex; gap:15px; justify-content:center; margin-top:20px;">
 
-            <i class="fa-solid fa-triangle-exclamation"></i>
+            <button
+                id="btnPause"
+                class="emergencia"
+                onclick="togglePause()">
 
-            EMERGÊNCIA
+                <i class="fa-solid fa-pause"></i>
 
-        </button>
+                PAUSAR
+
+            </button>
+
+        </div>
 
     </div>
 

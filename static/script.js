@@ -1,15 +1,10 @@
-// ============================
-// 🔥 SCADA CORE (BLINDADO)
-// ============================
-
-// evita erro de redeclare em reload
-window.lastStatus = window.lastStatus || "";
-
+let sistemaPausado = false;
 // ============================
 // 📡 ENVIO DE COMANDOS
 // ============================
 
 function enviar(cmd) {
+
     fetch('/comando', {
         method: 'POST',
         headers: {
@@ -17,10 +12,11 @@ function enviar(cmd) {
         },
         body: 'cmd=' + cmd
     });
+
 }
 
 // ============================
-// 🔔 NOTIFICAÇÕES SCADA
+// 🔔 NOTIFICAÇÕES
 // ============================
 
 function notificar(texto) {
@@ -30,49 +26,125 @@ function notificar(texto) {
     if (!area) return;
 
     const aviso = document.createElement('div');
+
     aviso.className = 'notificacao';
+
     aviso.innerText = texto;
 
     area.appendChild(aviso);
 
     setTimeout(() => {
+
         aviso.remove();
+
     }, 3000);
+
 }
 
 // ============================
-// 🎛 CONTROLES MANUAIS
+// ⬆️⬇️ ALETAS
+// ============================
+
+function subirAleta() {
+
+    const modo =
+        document.getElementById('modo-texto');
+
+    if (
+        modo &&
+        modo.innerText !== 'MANUAL'
+    ) {
+
+        notificar(
+            '⚠️ Disponível apenas no modo MANUAL'
+        );
+
+        return;
+    }
+
+    enviar('RIGHT');
+
+    notificar('⬆️ Subindo aleta');
+
+}
+
+function descerAleta() {
+
+    const modo =
+        document.getElementById('modo-texto');
+
+    if (
+        modo &&
+        modo.innerText !== 'MANUAL'
+    ) {
+
+        notificar(
+            '⚠️ Disponível apenas no modo MANUAL'
+        );
+
+        return;
+    }
+
+    enviar('LEFT');
+
+    notificar('⬇️ Descendo aleta');
+
+}
+
+// ============================
+// 🌀 AUTO
 // ============================
 
 function ativarAuto() {
+
     enviar('AUTO_ON');
 
-    document.getElementById('modo-texto').innerText = 'AUTOMÁTICO';
+    document.getElementById('modo-texto').innerText =
+        'AUTOMÁTICO';
+
+    document
+        .querySelectorAll('.manual-only')
+        .forEach(btn => btn.disabled = true);
 
     notificar('🌀 Modo automático ativado');
-}
 
-function desativarAuto() {
-    enviar('AUTO_OFF');
-
-    document.getElementById('modo-texto').innerText = 'MANUAL';
-
-    notificar('✋ Modo manual ativado');
 }
 
 // ============================
-// ⚙️ VELOCIDADE / RPM
+// ✋ MANUAL
+// ============================
+
+function desativarAuto() {
+
+    enviar('AUTO_OFF');
+
+    document.getElementById('modo-texto').innerText =
+        'MANUAL';
+
+    document
+        .querySelectorAll('.manual-only')
+        .forEach(btn => btn.disabled = false);
+
+    notificar('✋ Modo manual ativado');
+
+}
+
+// ============================
+// ⚙️ VELOCIDADE
 // ============================
 
 function alterarVelocidade(valor) {
 
-    document.getElementById('rpmValue').innerText = valor;
+    document.getElementById('rpmValue').innerText =
+        valor;
 
     enviar('SPD_' + valor);
 
-    let gauge = document.querySelector('.gauge');
+    let gauge =
+        document.querySelector('.gauge');
 
-    let graus = (valor - 5) * 18;
+    let graus =
+        (valor - 5) * 18;
 
     gauge.style.background =
         `conic-gradient(
@@ -81,179 +153,252 @@ function alterarVelocidade(valor) {
         )`;
 
     fanSpeed(valor);
+
 }
 
 // ============================
-// 🌪 FAN DINÂMICO
+// 🌪 FAN
 // ============================
 
 function fanSpeed(valor) {
 
-    let fan = document.querySelector('.fan');
+    let fan =
+        document.querySelector('.fan');
 
     if (!fan) return;
 
-    let tempo = 3 - (valor / 10);
+    let tempo =
+        3 - (valor / 10);
 
-    if (tempo < 0.2) tempo = 0.2;
+    if (tempo < 0.2)
+        tempo = 0.2;
 
-    fan.style.animation = `spin ${tempo}s linear infinite`;
+    fan.style.animation =
+        `spin ${tempo}s linear infinite`;
+
 }
 
 // ============================
-// 📡 LOOP SCADA PRINCIPAL
-// ============================
-
-async function loopScada() {
-
-    try {
-
-        const res = await fetch('/data');
-        const data = await res.json();
-
-        if (!data.status) return;
-
-        const status = data.status;
-
-        console.log("SCADA:", status);
-
-        // só reage se mudou
-        if (status !== window.lastStatus) {
-
-            window.lastStatus = status;
-
-            notificar("STATUS: " + status);
-
-            const elStatus = document.getElementById('statusArduino');
-
-            if (!elStatus) return;
-
-            // =========================
-            // 🔴 ERROR
-            // =========================
-            if (status.includes("ERROR") || status.includes("STOP")) {
-
-                elStatus.innerHTML = '<span class="pulse"></span> ERROR';
-                elStatus.className = "offline status-error";
-
-            }
-
-            // =========================
-            // 🟡 WARN
-            // =========================
-            else if (status.includes("WARN")) {
-
-                elStatus.innerHTML = '<span class="pulse"></span> WARNING';
-                elStatus.className = "status-warn";
-
-            }
-
-            // =========================
-            // 🟢 OK / NORMAL
-            // =========================
-            else {
-
-                elStatus.innerHTML = '<span class="pulse"></span> ONLINE';
-                elStatus.className = "online-ok status-ok";
-            }
-
-            // =========================
-            // 🧠 MODO
-            // =========================
-
-            const modo = document.getElementById('modo-texto');
-
-            if (modo) {
-                if (status.includes("AUTO")) {
-                    modo.innerText = "AUTOMÁTICO";
-                }
-
-                if (status.includes("MANUAL")) {
-                    modo.innerText = "MANUAL";
-                }
-            }
-        }
-
-    } catch (err) {
-        console.log("SCADA ERROR:", err);
-    }
-}
-
-// ============================
-// 🔁 LOOP INICIAR
-// ============================
-
-setInterval(loopScada, 500);
-loopScada();
-
-// ============================
-// 🧪 ARDUINO STATUS (fallback opcional)
+// 📡 STATUS ARDUINO
 // ============================
 
 async function verificarArduino() {
 
     try {
 
-        const resposta = await fetch('/status');
-        const dados = await resposta.json();
+        const resposta =
+            await fetch('/status');
 
-        const status = document.getElementById('statusArduino');
+        const dados =
+            await resposta.json();
+
+        const status =
+            document.getElementById('statusArduino');
 
         if (!status) return;
 
         if (dados.online) {
-            status.classList.add('online-ok');
+
+            status.innerHTML =
+                '<span class="pulse"></span> ONLINE';
+
+            status.className =
+                'online online-ok';
+
         } else {
-            status.classList.add('offline');
+
+            status.innerHTML =
+                '<span class="pulse"></span> OFFLINE';
+
+            status.className =
+                'online offline';
+
         }
 
-    } catch (e) {
-        console.log("Arduino check error");
     }
+
+    catch (e) {
+
+        console.log(
+            'Erro status Arduino'
+        );
+
+    }
+
 }
 
-setInterval(verificarArduino, 2000);
+setInterval(
+    verificarArduino,
+    2000
+);
+
 verificarArduino();
 
+// ============================
+// PARTICULAS
+// ============================
 
+particlesJS('particles-js', {
 
-function stepMotor(valor) {
+    particles: {
 
-    const modo = document.getElementById('modo-texto').innerText;
+        number: {
+            value: 80
+        },
 
-    if (modo !== "MANUAL") {
-        notificar("⚠️ Só funciona no modo manual");
-        return;
+        color: {
+            value: '#00bfff'
+        },
+
+        shape: {
+            type: 'circle'
+        },
+
+        opacity: {
+            value: 0.5
+        },
+
+        size: {
+            value: 3
+        },
+
+        move: {
+
+            enable: true,
+
+            speed: 2
+
+        },
+
+        line_linked: {
+
+            enable: true,
+
+            color: '#00bfff',
+
+            opacity: 0.2
+
+        }
+    }
+});
+
+// ============================
+// CANVAS FUNDO
+// ============================
+
+const canvas =
+    document.getElementById('bgCanvas');
+
+if (canvas) {
+
+    const ctx =
+        canvas.getContext('2d');
+
+    canvas.width =
+        window.innerWidth;
+
+    canvas.height =
+        window.innerHeight;
+
+    let points = [];
+
+    for (let i = 0; i < 80; i++) {
+
+        points.push({
+
+            x: Math.random() * canvas.width,
+
+            y: Math.random() * canvas.height,
+
+            vx: (Math.random() - 0.5) * 0.5,
+
+            vy: (Math.random() - 0.5) * 0.5
+
+        });
+
     }
 
-    posicaoAleta += valor;
+    function animate() {
 
-    if (posicaoAleta < 0) posicaoAleta = 0;
-    if (posicaoAleta > 10) posicaoAleta = 10;
+        ctx.clearRect(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
 
-    enviar('ALETA_' + posicaoAleta);
+        points.forEach(p => {
 
-    notificar("🎛 Posição: " + posicaoAleta);
+            p.x += p.vx;
+            p.y += p.vy;
+
+            if (
+                p.x < 0 ||
+                p.x > canvas.width
+            ) p.vx *= -1;
+
+            if (
+                p.y < 0 ||
+                p.y > canvas.height
+            ) p.vy *= -1;
+
+            ctx.beginPath();
+
+            ctx.arc(
+                p.x,
+                p.y,
+                2,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fillStyle =
+                'rgba(0,191,255,0.6)';
+
+            ctx.fill();
+
+        });
+
+        requestAnimationFrame(
+            animate
+        );
+
+    }
+
+    animate();
 }
-window.posicaoAleta = window.posicaoAleta || 5;
 
-function stepMotor(dir) {
+// ============================
+// ⏸ PAUSAR / ▶ RETOMAR
+// ============================
 
-    const modo = document.getElementById("modo-texto");
 
-    if (!modo) return;
+function togglePause() {
 
-    if (modo.innerText !== "MANUAL") {
-        notificar("⚠️ Só funciona no modo manual");
-        return;
+    const btn = document.getElementById('btnPause');
+
+    if (!btn) return;
+
+    if (!sistemaPausado) {
+
+        enviar('PAUSE');
+
+        sistemaPausado = true;
+
+        btn.innerHTML =
+            '<i class="fa-solid fa-play"></i> RETOMAR';
+
+        notificar('⏸ Sistema pausado');
+
+    } else {
+
+        enviar('RESUME');
+
+        sistemaPausado = false;
+
+        btn.innerHTML =
+            '<i class="fa-solid fa-pause"></i> PAUSAR';
+
+        notificar('▶ Sistema retomado');
     }
-
-    if (dir === "UP") window.posicaoAleta++;
-    if (dir === "DOWN") window.posicaoAleta--;
-
-    window.posicaoAleta = Math.max(0, Math.min(10, window.posicaoAleta));
-
-    enviar("ALETA_" + window.posicaoAleta);
-
-    notificar("🎛 Posição: " + window.posicaoAleta);
 }

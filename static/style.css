@@ -752,3 +752,29 @@ button:hover::before {
 
     border-radius: 6px;
 }
+
+/* ============================
+   MODO MANUAL BLOQUEADO
+============================ */
+
+.manual-only:disabled {
+
+    opacity: 0.35;
+
+    cursor: not-allowed;
+
+    filter: grayscale(100%);
+
+    transform: none !important;
+
+    box-shadow: none !important;
+}
+
+.manual-only:disabled:hover {
+
+    background: rgba(0,191,255,0.15);
+
+    transform: none;
+
+    box-shadow: none;
+}
