@@ -136,15 +136,10 @@ h1 {
     }
 }
 
-.dashboard {
-
-    display: grid;
-
-    grid-template-columns: repeat(3, 1fr);
-
-    gap: 15px;
-
-    margin-bottom: 40px;
+.dashboard{
+    display:grid;
+    grid-template-columns: 1.2fr 0.8fr 1.4fr;
+    gap:15px;
 }
 
 .card {
@@ -164,6 +159,27 @@ h1 {
     box-shadow:
         0 0 30px rgba(0,191,255,0.1);
 }
+.card {
+    display: flex;
+    flex-direction: column;
+}
+
+.card h2 {
+    text-align: center;
+}
+
+
+#modo-texto {
+    flex: 1;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    text-align: center;
+}
 
 #sentido-texto {
     height: 100%;
@@ -177,8 +193,8 @@ h1 {
 }
 
 .buttons-grid button {
-    height: 70px;
-    font-size: 28px;
+    height: 80px;
+    font-size: 30px;
 }
 
 .card h2 {
