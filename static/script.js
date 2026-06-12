@@ -47,66 +47,42 @@ function notificar(texto) {
 
 function girarDireita() {
 
-    const modo =
-        document.getElementById('modo-texto');
+    enviar('LEFT'); // mantém invertido se teu motor está assim
 
-    if (
-        modo &&
-        modo.innerText !== 'MANUAL'
-    ) {
+    document.getElementById(
+        'sentido-texto'
+    ).innerText = 'HORÁRIO';
 
-        notificar(
-            '⚠️ Disponível apenas no modo MANUAL'
-        );
-
-        return;
-    }
-
-    enviar('RIGHT');
-
-    notificar('↻ Giro horário');
-
+    notificar(
+        '➡️ Sentido horário selecionado'
+    );
 }
 
 function girarEsquerda() {
 
-    const modo =
-        document.getElementById('modo-texto');
+    enviar('RIGHT'); // mantém invertido se teu motor está assim
 
-    if (
-        modo &&
-        modo.innerText !== 'MANUAL'
-    ) {
+    document.getElementById(
+        'sentido-texto'
+    ).innerText = 'ANTI-HORÁRIO';
 
-        notificar(
-            '⚠️ Disponível apenas no modo MANUAL'
-        );
-
-        return;
-    }
-
-    enviar('LEFT');
-
-    notificar('↺ Giro anti-horário');
-
+    notificar(
+        '⬅️ Sentido anti-horário selecionado'
+    );
 }
-
-// ============================
-// 🌀 AUTO
-// ============================
 
 function ativarAuto() {
 
     enviar('AUTO_ON');
 
     document.getElementById('modo-texto').innerText =
-        'AUTOMÁTICO';
+        'CONTÍNUO';
 
     document
         .querySelectorAll('.manual-only')
         .forEach(btn => btn.disabled = true);
 
-    notificar('🌀 Modo automático ativado');
+    notificar('▶️ Esteira em operação contínua');
 
 }
 
@@ -119,13 +95,13 @@ function desativarAuto() {
     enviar('AUTO_OFF');
 
     document.getElementById('modo-texto').innerText =
-        'MANUAL';
+        'PARADO';
 
     document
         .querySelectorAll('.manual-only')
         .forEach(btn => btn.disabled = false);
 
-    notificar('✋ Modo manual ativado');
+    notificar('⏹️ Operação contínua encerrada');
 
 }
 
@@ -152,29 +128,7 @@ function alterarVelocidade(valor) {
             rgba(255,255,255,0.1) ${graus}deg
         )`;
 
-    fanSpeed(valor);
-
-}
-
-// ============================
-// 🌪 FAN
-// ============================
-
-function fanSpeed(valor) {
-
-    let fan =
-        document.querySelector('.fan');
-
-    if (!fan) return;
-
-    let tempo =
-        3 - (valor / 10);
-
-    if (tempo < 0.2)
-        tempo = 0.2;
-
-    fan.style.animation =
-        `spin ${tempo}s linear infinite`;
+    
 
 }
 
@@ -388,7 +342,10 @@ function togglePause() {
         btn.innerHTML =
             '<i class="fa-solid fa-play"></i> RETOMAR';
 
-        notificar('⏸ Sistema pausado');
+        document.getElementById('modo-texto').innerText =
+    'PAUSADO';
+
+            notificar('⏸ Esteira pausada');
 
     } else {
 
@@ -399,6 +356,9 @@ function togglePause() {
         btn.innerHTML =
             '<i class="fa-solid fa-pause"></i> PAUSAR';
 
-        notificar('▶ Sistema retomado');
+        document.getElementById('modo-texto').innerText =
+    'CONTÍNUO';
+
+         notificar('▶ Esteira retomada');
     }
 }
