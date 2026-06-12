@@ -2,9 +2,7 @@
 <html lang="pt-br">
 
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>SMART AIRFLOW</title>
@@ -13,38 +11,28 @@
 
     <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
 </head>
-
-<script src="https://cdn.jsdelivr.net/npm/particles.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <body>
 
+    <!-- FUNDO / EFEITOS -->
     <div id="particles-js"></div>
-
     <div class="grid-bg"></div>
-
     <div class="background-glow"></div>
 
+    <!-- CONTEÚDO PRINCIPAL -->
     <div class="container">
 
         <div class="topbar">
 
             <div class="logo-area">
-
                 <img src="/static/img/logo.png" class="logo-img">
-
                 <h1>SMART AIRFLOW</h1>
-
             </div>
 
             <div class="online" id="statusArduino">
-
                 <span class="pulse"></span>
-
                 VERIFICANDO...
-
             </div>
 
         </div>
@@ -52,21 +40,15 @@
         <div class="dashboard">
 
             <!-- VELOCIDADE -->
-
             <div class="card rpm-card">
 
                 <h2>VELOCIDADE</h2>
 
                 <div class="gauge">
-
                     <div class="gauge-inner">
-
                         <span id="rpmValue">10</span>
-
                         <small>RPM</small>
-
                     </div>
-
                 </div>
 
                 <input
@@ -80,48 +62,29 @@
 
             </div>
 
-            <!-- CONTROLE -->
-
+            <!-- MODO -->
             <div class="card mode-card">
 
                 <h2>MODO</h2>
 
-                <div id="modo-texto" class="modo">
-                    MANUAL
-                </div>
+                <div id="modo-texto" class="modo">MANUAL</div>
 
                 <div class="buttons-grid">
 
-                    <!-- SUBIR -->
-
                     <button class="manual-only" onclick="subirAleta()">
-
                         <i class="fa-solid fa-arrow-up"></i>
-
                     </button>
-
-                    <!-- DESCER -->
 
                     <button class="manual-only" onclick="descerAleta()">
-
                         <i class="fa-solid fa-arrow-down"></i>
-
                     </button>
-
-                    <!-- AUTO -->
 
                     <button onclick="ativarAuto()">
-
                         <i class="fa-solid fa-fan"></i>
-
                     </button>
 
-                    <!-- MANUAL -->
-
                     <button onclick="desativarAuto()">
-
                         <i class="fa-solid fa-hand"></i>
-
                     </button>
 
                 </div>
@@ -130,46 +93,38 @@
 
         </div>
 
-        <!-- ANIMAÇÃO -->
-
+        <!-- ANIMAÇÃO VENTILADOR -->
         <div class="airflow-card">
 
             <div class="fan-area">
-
                 <div class="fan"></div>
-
                 <div class="air air1"></div>
                 <div class="air air2"></div>
                 <div class="air air3"></div>
-
             </div>
 
         </div>
 
-        <!-- BOTÕES INFERIORES -->
-
+        <!-- BOTÃO PAUSA -->
         <div style="display:flex; gap:15px; justify-content:center; margin-top:20px;">
 
-            <button
-                id="btnPause"
-                class="emergencia"
-                onclick="togglePause()">
-
+            <button id="btnPause" class="emergencia" onclick="togglePause()">
                 <i class="fa-solid fa-pause"></i>
-
                 PAUSAR
-
             </button>
 
         </div>
 
     </div>
 
+    <!-- CANVAS E NOTIFICAÇÕES -->
     <canvas id="bgCanvas"></canvas>
-
     <div id="notificacoes"></div>
 
-    <script src="/static/script.js"></script>
+    <!-- SCRIPTS (ORDEM CORRETA) -->
+    <script src="{{ url_for('static', filename='js/three.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/particles.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 
 </body>
 

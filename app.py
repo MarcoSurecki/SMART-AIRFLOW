@@ -9,7 +9,7 @@ arduino = None
 latest_data = "SMART AIRFLOW"
 connection_status = False
 
-PORTA = "COM9"
+PORTA = "/dev/ttyACM0"
 BAUDRATE = 9600
 
 
