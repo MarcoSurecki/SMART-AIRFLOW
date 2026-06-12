@@ -6,7 +6,7 @@ import time
 app = Flask(__name__)
 
 arduino = None
-latest_data = "SMART AIRFLOW"
+latest_data = "BAGGAGE CONTROL SYSTEM"
 connection_status = False
 
 PORTA = "/dev/ttyACM0"

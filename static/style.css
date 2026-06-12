@@ -312,70 +312,6 @@ input[type="range"] {
     align-items: center;
 }
 
-.fan-area {
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 20px;
-}
-
-.fan {
-
-    width: 70px;
-    height: 70px;
-
-    border-radius: 50%;
-
-    border: 12px solid #00bfff;
-
-    position: relative;
-
-    animation: spin 2s linear infinite;
-}
-
-.fan::before,
-.fan::after {
-
-    content: '';
-
-    position: absolute;
-
-    background: #00bfff;
-}
-
-.fan::before {
-
-    width: 20px;
-    height: 140px;
-
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-.fan::after {
-
-    width: 140px;
-    height: 20px;
-
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-@keyframes spin {
-
-    from {
-
-        transform: rotate(0deg);
-    }
-
-    to {
-
-        transform: rotate(360deg);
-    }
-}
-
 .air {
 
     height: 18px;
@@ -405,28 +341,78 @@ input[type="range"] {
 
     width: 200px;
 }
+.belt-area {
 
-@keyframes airflow {
+    width: 100%;
 
-    0% {
+    display: flex;
 
-        opacity: 0.2;
-        transform: translateX(0);
-    }
+    justify-content: center;
 
-    50% {
-
-        opacity: 1;
-        transform: translateX(20px);
-    }
-
-    100% {
-
-        opacity: 0.2;
-        transform: translateX(0);
-    }
+    align-items: center;
 }
 
+.belt {
+
+    width: 90%;
+
+    height: 60px;
+
+    border-radius: 30px;
+
+    border: 2px solid #00bfff;
+
+    position: relative;
+
+    overflow: hidden;
+
+    background:
+        linear-gradient(
+            90deg,
+            rgba(0,191,255,0.1),
+            rgba(255,255,255,0.05)
+        );
+}
+
+.bag {
+
+    position: absolute;
+
+    top: 10px;
+
+    font-size: 32px;
+
+    animation: moveBag 8s linear infinite;
+}
+
+.bag1 { left: -10%; }
+
+.bag2 {
+
+    left: -40%;
+
+    animation-delay: 2s;
+}
+
+.bag3 {
+
+    left: -70%;
+
+    animation-delay: 4s;
+}
+
+@keyframes moveBag {
+
+    from {
+
+        left: -20%;
+    }
+
+    to {
+
+        left: 110%;
+    }
+}
 .emergencia {
 
     width: 100%;

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>SMART AIRFLOW</title>
+    <title>BAGGAGE CONTROL SYSTEM</title>
 
     <link rel="stylesheet" href="/static/style.css">
 
@@ -27,7 +27,7 @@
 
             <div class="logo-area">
                 <img src="/static/img/logo.png" class="logo-img">
-                <h1>SMART AIRFLOW</h1>
+                <h1>BAGGAGE CONTROL SYSTEM</h1>
             </div>
 
             <div class="online" id="statusArduino">
@@ -65,22 +65,22 @@
             <!-- MODO -->
             <div class="card mode-card">
 
-                <h2>MODO</h2>
+                <h2>CONTROLE</h2>
 
                 <div id="modo-texto" class="modo">MANUAL</div>
 
                 <div class="buttons-grid">
 
-                    <button class="manual-only" onclick="subirAleta()">
-                        <i class="fa-solid fa-arrow-up"></i>
+                    <button class="manual-only" onclick="girarDireita()">
+                        <i class="fa-solid fa-arrow-right"></i>
                     </button>
 
-                    <button class="manual-only" onclick="descerAleta()">
-                        <i class="fa-solid fa-arrow-down"></i>
+                    <button class="manual-only" onclick="girarEsquerda()">
+                        <i class="fa-solid fa-arrow-left"></i>
                     </button>
 
                     <button onclick="ativarAuto()">
-                        <i class="fa-solid fa-fan"></i>
+                        <i class="fa-solid fa-arrows-rotate"></i>
                     </button>
 
                     <button onclick="desativarAuto()">
@@ -93,14 +93,20 @@
 
         </div>
 
-        <!-- ANIMAÇÃO VENTILADOR -->
         <div class="airflow-card">
 
-            <div class="fan-area">
-                <div class="fan"></div>
-                <div class="air air1"></div>
-                <div class="air air2"></div>
-                <div class="air air3"></div>
+            <div class="belt-area">
+
+                <div class="belt">
+
+                    <div class="bag bag1">🧳</div>
+
+                    <div class="bag bag2">🧳</div>
+
+                    <div class="bag bag3">🧳</div>
+
+                </div>
+
             </div>
 
         </div>

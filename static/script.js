@@ -45,7 +45,7 @@ function notificar(texto) {
 // ⬆️⬇️ ALETAS
 // ============================
 
-function subirAleta() {
+function girarDireita() {
 
     const modo =
         document.getElementById('modo-texto');
@@ -64,11 +64,11 @@ function subirAleta() {
 
     enviar('RIGHT');
 
-    notificar('⬆️ Subindo aleta');
+    notificar('↻ Giro horário');
 
 }
 
-function descerAleta() {
+function girarEsquerda() {
 
     const modo =
         document.getElementById('modo-texto');
@@ -87,7 +87,7 @@ function descerAleta() {
 
     enviar('LEFT');
 
-    notificar('⬇️ Descendo aleta');
+    notificar('↺ Giro anti-horário');
 
 }
 
