@@ -340,7 +340,7 @@ function togglePause() {
         sistemaPausado = true;
 
         btn.innerHTML =
-            '<i class="fa-solid fa-play"></i> RETOMAR';
+            '<i class="fa-solid fa-play"></i> RETOMAR ESTEIRA';
 
         document.getElementById('modo-texto').innerText =
     'PAUSADO';
@@ -354,7 +354,7 @@ function togglePause() {
         sistemaPausado = false;
 
         btn.innerHTML =
-            '<i class="fa-solid fa-pause"></i> PAUSAR';
+            '<i class="fa-solid fa-pause"></i> PAUSAR ESTEIRA';
 
         document.getElementById('modo-texto').innerText =
     'CONTÍNUO';
