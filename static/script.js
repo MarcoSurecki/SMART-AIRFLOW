@@ -47,7 +47,7 @@ function notificar(texto) {
 
 function girarDireita() {
 
-    enviar('LEFT'); // mantém invertido se teu motor está assim
+    enviar('RIGHT'); 
 
     document.getElementById(
         'sentido-texto'
@@ -60,7 +60,7 @@ function girarDireita() {
 
 function girarEsquerda() {
 
-    enviar('RIGHT'); // mantém invertido se teu motor está assim
+    enviar('LEFT'); 
 
     document.getElementById(
         'sentido-texto'
