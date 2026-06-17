@@ -300,7 +300,7 @@ input[type="range"] {
 
 .buttons-grid button {
 
-    height: 65px;
+    height: 80px;
 
     border: none;
 
@@ -310,7 +310,9 @@ input[type="range"] {
 
     color: white;
 
-    font-size: 22px;
+    font-size: 50px;
+
+    font-weight: bold;
 
     cursor: pointer;
 
