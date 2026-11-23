@@ -4,142 +4,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>BAGGAGE CONTROL SYSTEM</title>
-
-    <link rel="stylesheet" href="/static/style.css">
-
-    <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <title>ESTEIRA INDUSTRIAL · PAINEL DE CONTROLE</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
 <body>
 
-    <!-- FUNDO / EFEITOS -->
-    <div id="particles-js"></div>
-    <div class="grid-bg"></div>
-    <div class="background-glow"></div>
-
-    <!-- CONTEÚDO PRINCIPAL -->
-    <div class="container">
-
-        <div class="topbar">
-
-            <div class="logo-area">
-                <img src="/static/img/logo.png" class="logo-img">
-                <h1>BAGGAGE CONTROL SYSTEM</h1>
-            </div>
-
-            <div class="online" id="statusArduino">
-                <span class="pulse"></span>
-                VERIFICANDO...
-            </div>
-
+    <!-- TELA DE BOOT -->
+    <div class="boot" id="boot">
+        <div class="boot-inner">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" class="boot-logo" alt="">
+            <h2>ESTEIRA INDUSTRIAL</h2>
+            <span class="boot-sub">SISTEMA DE CONTROLE · LINHA 01</span>
+            <div class="boot-lines mono" id="bootLines"></div>
+            <div class="boot-bar"><div id="bootFill"></div></div>
         </div>
+    </div>
 
-        <div class="dashboard">
+    <!-- MOLDURA DE ALARME -->
+    <div class="alarm-frame"></div>
+
+    <div class="hmi">
+
+        <!-- CABEÇALHO -->
+        <header class="topbar">
+            <div class="brand">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" class="logo-img" alt="">
+                <div>
+                    <h1>ESTEIRA INDUSTRIAL</h1>
+                    <span class="subtitle">PAINEL DE CONTROLE · LINHA 01</span>
+                </div>
+            </div>
+
+            <div class="top-info">
+                <button class="info-box sound-btn" id="btnSom" title="Som do painel">
+                    <span class="info-label">SOM</span>
+                    <span class="info-value mono" id="somTexto">ON</span>
+                </button>
+                <div class="info-box info-serial">
+                    <span class="info-label">SERIAL</span>
+                    <span class="info-value mono" id="serialMsg">—</span>
+                </div>
+                <div class="info-box">
+                    <span class="info-label">HORA</span>
+                    <span class="info-value mono" id="relogio">--:--:--</span>
+                </div>
+                <div class="info-box">
+                    <span class="info-label">CLP / ARDUINO</span>
+                    <span class="conn" id="statusArduino">
+                        <span class="lamp lamp-amber"></span> VERIFICANDO
+                    </span>
+                </div>
+            </div>
+        </header>
+
+        <div class="hazard"></div>
+
+        <!-- ESTEIRA -->
+        <section class="panel conveyor-panel">
+            <div class="panel-head">
+                <span class="tag">M-01</span>
+                <h2>TRANSPORTADOR DE CORREIA</h2>
+                <span class="flow" id="flowIndicator">
+                    <span class="flow-arrow">▶</span>
+                    <span class="flow-arrow">▶</span>
+                    <span class="flow-arrow">▶</span>
+                </span>
+            </div>
+
+            <div class="scene-wrap">
+                <canvas id="scene"></canvas>
+                <div class="belt-state" id="beltState">PARADO</div>
+            </div>
+        </section>
+
+        <!-- PAINEL DE COMANDO -->
+        <section class="controls">
 
             <!-- VELOCIDADE -->
-            <div class="card rpm-card">
+            <div class="panel">
+                <div class="panel-head">
+                    <span class="tag">SP</span>
+                    <h2>VELOCIDADE</h2>
+                </div>
 
-                <h2>VELOCIDADE</h2>
-
-                <div class="gauge">
-                    <div class="gauge-inner">
-                        <span id="rpmValue">10</span>
+                <div class="gauge-wrap">
+                    <svg id="gauge" viewBox="0 0 200 160"></svg>
+                    <div class="gauge-readout">
+                        <span class="mono" id="rpmValue">10</span>
                         <small>RPM</small>
                     </div>
                 </div>
 
-                <input
-                    type="range"
-                    min="5"
-                    max="20"
-                    value="10"
-                    id="sliderVelocidade"
-                    oninput="alterarVelocidade(this.value)"
-                >
-
+                <div class="speed-row">
+                    <button class="hmi-btn step-btn" id="btnMenos" aria-label="Diminuir velocidade">−</button>
+                    <input type="range" min="5" max="20" value="10" id="sliderVelocidade">
+                    <button class="hmi-btn step-btn" id="btnMais" aria-label="Aumentar velocidade">+</button>
+                </div>
             </div>
 
-            <div class="card">
-
-                <h2>SENTIDO</h2>
-
-                <div id="sentido-texto" class="modo">
-                    HORÁRIO
+            <!-- SENTIDO -->
+            <div class="panel">
+                <div class="panel-head">
+                    <span class="tag">DIR</span>
+                    <h2>SENTIDO</h2>
                 </div>
 
-            </div>
-
-            <!-- MODO -->
-            <div class="card mode-card">
-
-                <h2>STATUS</h2>
-
-                <div id="modo-texto" class="modo">PARADO</div>
-
-                <div class="buttons-grid">
-
-                    <button class="manual-only" onclick="girarEsquerda()">
-                        ←
-                    </button>
-
-                    <button class="manual-only" onclick="girarDireita()">
-                        →
-                    </button>
-
-                    <button onclick="ativarAuto()">
-                        ↻
-                    </button>
-
-                    <button onclick="desativarAuto()">
-                        ✋
-                    </button>
-
+                <div class="display display-small">
+                    <span class="mono" id="sentido-texto">HORÁRIO</span>
                 </div>
 
+                <div class="btn-row">
+                    <button class="hmi-btn manual-only" id="btnEsquerda">
+                        <span class="lamp" id="lampEsquerda"></span>
+                        ◀ ANTI-HORÁRIO
+                    </button>
+                    <button class="hmi-btn manual-only" id="btnDireita">
+                        <span class="lamp lamp-green" id="lampDireita"></span>
+                        HORÁRIO ▶
+                    </button>
+                </div>
+                <p class="hint">Disponível apenas com a esteira parada</p>
             </div>
 
-        </div>
-
-        <div class="airflow-card">
-
-            <div class="belt-area">
-
-                <div class="belt">
-
-                    <div class="bag bag1">🧳</div>
-
-                    <div class="bag bag2">🧳</div>
-
-                    <div class="bag bag3">🧳</div>
-                    
-
+            <!-- OPERAÇÃO -->
+            <div class="panel">
+                <div class="panel-head">
+                    <span class="tag">OP</span>
+                    <h2>OPERAÇÃO</h2>
                 </div>
 
+                <div class="display display-small">
+                    <span class="lamp" id="lampModo"></span>
+                    <span class="mono" id="modo-texto">PARADO</span>
+                </div>
+
+                <div class="btn-row">
+                    <button class="hmi-btn btn-start" id="btnLigar">I · LIGAR</button>
+                    <button class="hmi-btn btn-stop" id="btnDesligar">O · DESLIGAR</button>
+                </div>
+
+                <div class="timer">
+                    <span class="info-label">TEMPO EM OPERAÇÃO</span>
+                    <span class="mono" id="tempoOperacao">00:00:00</span>
+                </div>
             </div>
 
-        </div>
+            <!-- EMERGÊNCIA -->
+            <div class="panel panel-emergency">
+                <div class="panel-head">
+                    <span class="tag tag-red">E-STOP</span>
+                    <h2>PARADA</h2>
+                </div>
 
-        <!-- BOTÃO PAUSA -->
-        <div style="display:flex; gap:15px; justify-content:center; margin-top:20px;">
+                <div class="estop-ring">
+                    <button class="estop" id="btnPause">
+                        <span id="btnPauseText">PAUSAR</span>
+                    </button>
+                </div>
+            </div>
 
-            <button id="btnPause" class="emergencia" onclick="togglePause()">
-                ⏸ PAUSAR ESTEIRA
-            </button>
-
-        </div>
+        </section>
 
     </div>
 
-    <!-- CANVAS E NOTIFICAÇÕES -->
-    <canvas id="bgCanvas"></canvas>
+    <!-- EVENTOS (avisos na lateral) -->
     <div id="notificacoes"></div>
 
-    <!-- SCRIPTS (ORDEM CORRETA) -->
-    <script src="{{ url_for('static', filename='js/three.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/particles.min.js') }}"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 
 </body>
