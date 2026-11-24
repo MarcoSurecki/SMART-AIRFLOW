@@ -320,6 +320,69 @@ async function verificarArduino() {
     }
 }
 
+// ---------------- CONTADOR (sensor no Arduino) ----------------
+
+let contadorIniciado = false;
+
+async function lerContador() {
+    try {
+        const dados = await (await fetch('/contador')).json();
+        const total = Number(dados.total) || 0;
+
+        if (contadorIniciado && total > S.contagem) {
+            S.scanFlash = 1;
+            somScan();
+            const el = $('contador');
+            el.classList.add('hit');
+            clearTimeout(lerContador.t);
+            lerContador.t = setTimeout(() => el.classList.remove('hit'), 350);
+        }
+
+        contadorIniciado = true;
+        S.contagem = total;
+        mostrarTotal(total);
+        $('contRate').textContent = dados.por_minuto ?? 0;
+    } catch (e) { /* ignora */ }
+}
+
+function mostrarTotal(total) {
+    const el = $('contTotal');
+    el.textContent = total;
+    el.style.setProperty('--d', Math.max(3, String(total).length));
+}
+
+let zerarTimer = null;
+
+function zerarContador() {
+    const btn = $('btnZerar');
+
+    // primeiro toque pede confirmação, segundo toque zera
+    if (!btn.classList.contains('confirm')) {
+        clique();
+        btn.classList.add('confirm');
+        btn.textContent = 'CONFIRMAR?';
+        zerarTimer = setTimeout(() => {
+            btn.classList.remove('confirm');
+            btn.textContent = 'ZERAR';
+        }, 3000);
+        return;
+    }
+
+    clearTimeout(zerarTimer);
+    btn.classList.remove('confirm');
+    btn.textContent = 'ZERAR';
+    clique();
+
+    fetch('/contador/zerar', { method: 'POST' })
+        .then(() => {
+            S.contagem = 0;
+            mostrarTotal(0);
+            $('contRate').textContent = '0';
+            registrar('Contador de caixas zerado', 'warn');
+        })
+        .catch(() => registrar('Falha ao zerar o contador', 'err'));
+}
+
 async function lerSerial() {
     try {
         const dados = await (await fetch('/data')).json();
@@ -353,7 +416,7 @@ const S = {
     GY: 335, BH: 120, D: 110, X0: 30, X1: 900, TUN: 110, XS: 600,
     vel: 0, offset: 0, t: 0,
     boxes: [], dust: [],
-    lastScan: '------', scanFlash: 0, cortina: 0
+    contagem: 0, scanFlash: 0, cortina: 0
 };
 
 const CORES_CAIXA = ['#c8935a', '#b98448', '#d4a56c', '#a8763f', '#c18a4e'];
@@ -486,17 +549,6 @@ function moverCaixas(dx) {
         }
     }
 
-    // leitura no scanner
-    if (Math.abs(S.vel) > 1) {
-        for (const b of S.boxes) {
-            if (!b.scanned && b.x < S.XS && b.x + b.w > S.XS) {
-                b.scanned = true;
-                S.lastScan = b.code;
-                S.scanFlash = 1;
-                somScan();
-            }
-        }
-    }
 }
 
 // ---------- desenho ----------
@@ -819,10 +871,10 @@ function desenharDisplayScanner() {
 
     c.fillStyle = '#8b939e';
     c.font = '700 8px Consolas, monospace';
-    c.fillText('SCANNER S-01', x + 6, y + 11);
+    c.fillText('SENSOR S-01', x + 6, y + 11);
     c.fillStyle = f > 0.2 ? '#7dff98' : '#35d45a';
     c.font = '700 14px Consolas, monospace';
-    c.fillText((f > 0 ? '✓ ' : '  ') + S.lastScan, x + 4, y + 28);
+    c.fillText((f > 0 ? '✓ ' : '  ') + String(S.contagem).padStart(6, '0'), x + 4, y + 28);
 }
 
 function desenharTunel(x0, interno, rotulo) {
@@ -1147,6 +1199,7 @@ document.addEventListener('DOMContentLoaded', () => {
         alterarVelocidade(v);
     };
     $('btnMenos').addEventListener('click', () => passo(-1));
+    $('btnZerar').addEventListener('click', zerarContador);
     $('btnMais').addEventListener('click', () => passo(1));
     $('btnSom').addEventListener('click', () => {
         som.on = !som.on;
@@ -1175,6 +1228,8 @@ document.addEventListener('DOMContentLoaded', () => {
     atualizarRelogio();
     setInterval(verificarArduino, 2000);
     setInterval(lerSerial, 1000);
+    lerContador();
+    setInterval(lerContador, 500);
     setInterval(atualizarRelogio, 1000);
 
     requestAnimationFrame(quadro);

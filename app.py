@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import serial
 import threading
 import time
+from collections import deque
 
 app = Flask(__name__)
 
@@ -11,6 +12,20 @@ connection_status = False
 
 PORTA = "/dev/ttyACM0"
 BAUDRATE = 9600
+
+# ---------------- CONTADOR DE CAIXAS ----------------
+# O Arduino envia a linha "CAIXA" a cada caixa detectada pelo sensor.
+
+total_caixas = 0
+horarios_caixas = deque()      # horários das caixas do último minuto
+trava_contador = threading.Lock()
+
+
+def registrar_caixa():
+    global total_caixas
+    with trava_contador:
+        total_caixas += 1
+        horarios_caixas.append(time.time())
 
 
 def conectar_arduino():
@@ -42,15 +57,22 @@ def monitor_serial():
 
         try:
 
-            if arduino.in_waiting:
+            # lê todas as linhas pendentes para não perder caixas
+            while arduino.in_waiting:
 
                 linha = arduino.readline().decode(
                     errors='ignore'
                 ).strip()
 
-                if linha:
+                if not linha:
+                    continue
+
+                connection_status = True
+
+                if linha.upper() == "CAIXA":
+                    registrar_caixa()
+                else:
                     latest_data = linha
-                    connection_status = True
 
         except Exception as e:
 
@@ -113,6 +135,34 @@ def status():
     return jsonify({
         "online": connection_status
     })
+
+
+@app.route('/contador')
+def contador():
+
+    agora = time.time()
+
+    with trava_contador:
+
+        while horarios_caixas and agora - horarios_caixas[0] > 60:
+            horarios_caixas.popleft()
+
+        return jsonify({
+            "total": total_caixas,
+            "por_minuto": len(horarios_caixas)
+        })
+
+
+@app.route('/contador/zerar', methods=['POST'])
+def zerar_contador():
+
+    global total_caixas
+
+    with trava_contador:
+        total_caixas = 0
+        horarios_caixas.clear()
+
+    return 'OK'
 
 
 @app.route('/data')

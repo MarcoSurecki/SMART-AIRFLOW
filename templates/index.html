@@ -61,6 +61,8 @@
         <div class="hazard"></div>
 
         <!-- ESTEIRA -->
+        <div class="top-row">
+
         <section class="panel conveyor-panel">
             <div class="panel-head">
                 <span class="tag">M-01</span>
@@ -74,9 +76,33 @@
 
             <div class="scene-wrap">
                 <canvas id="scene"></canvas>
+
                 <div class="belt-state" id="beltState">PARADO</div>
             </div>
         </section>
+
+        <!-- CONTADOR DE CAIXAS (sensor real) -->
+        <section class="panel counter-panel" id="contador">
+            <div class="panel-head">
+                <span class="tag">S-01</span>
+                <h2>CONTADOR</h2>
+            </div>
+
+            <div class="display counter-display">
+                <span class="info-label">CAIXAS</span>
+                <span class="mono counter-value" id="contTotal">0</span>
+            </div>
+
+            <div class="counter-bottom">
+                <div class="counter-rate">
+                    <span class="info-label">POR MINUTO</span>
+                    <span class="mono"><span id="contRate">0</span> cx/min</span>
+                </div>
+                <button class="hmi-btn counter-reset" id="btnZerar">ZERAR</button>
+            </div>
+        </section>
+
+        </div>
 
         <!-- PAINEL DE COMANDO -->
         <section class="controls">
