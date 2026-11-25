@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Painel da Esteira
+Comment=Abre o painel da esteira em tela cheia ao ligar
+Exec=/bin/bash CAMINHO_DO_PROJETO/kiosk/iniciar_painel.sh
+X-GNOME-Autostart-enabled=true

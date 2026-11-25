@@ -1073,3 +1073,241 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .counter-rate .mono { white-space: nowrap; }
+
+/* ---------- BOTÕES DE SENTIDO (seta grande + nome) ---------- */
+
+.dir-btn { flex-direction: column; gap: 4px; }
+.dir-seta { font-size: 30px; line-height: 1; }
+.dir-nome { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.controls .btn-row .dir-btn .lamp { display: inline-block; width: 11px; height: 11px; }
+
+/* ---------- AVISO DE CONEXÃO PERDIDA ---------- */
+
+.offline {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.75);
+}
+
+body.sem-conexao .offline { display: flex; }
+
+.offline-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 28px 44px;
+    background: var(--panel);
+    border: 2px solid var(--red);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.offline-box .lamp { width: 26px; height: 26px; animation: blink 1s steps(2) infinite; }
+.offline-box h2 { font-size: 26px; letter-spacing: 3px; color: #fff; }
+.offline-box p { font-size: 17px; color: var(--muted); }
+
+/* ---------- TELA DE TOQUE ---------- */
+
+html { touch-action: manipulation; }          /* sem zoom com toque duplo */
+* { -webkit-tap-highlight-color: transparent; }
+body { -webkit-user-select: none; user-select: none; }
+body.kiosk, body.kiosk * { cursor: none !important; }   /* abre com ?kiosk */
+
+/* ---------- 7" 1024x600: textos maiores ---------- */
+
+@media (max-height: 720px) and (min-width: 701px) {
+    h1 { font-size: 20px; }
+    .logo-img { height: 34px; }
+    .info-box { padding: 3px 12px; }
+    .info-label { font-size: 11px; }
+    .info-value { font-size: 17px; }
+    .info-serial .info-value { font-size: 14px; line-height: 20px; max-width: 300px; }
+    .conn { font-size: 15px; }
+    .tag { font-size: 12px; }
+    .panel-head h2, .controls .panel-head h2 { font-size: 15px; }
+    .display-small { font-size: 20px; }
+    .controls .hmi-btn { font-size: 16px; }
+    .dir-nome { font-size: 14px; }
+    .timer .info-label { font-size: 11px; }
+    .timer .mono { font-size: 19px; }
+    .gauge-readout span { font-size: 30px; }
+    .estop { font-size: 18px; }
+    .belt-state { font-size: 12px; }
+    .counter-display .info-label, .counter-rate .info-label { font-size: 12px; }
+    .counter-rate .mono { font-size: 17px; }
+    .counter-reset { font-size: 15px; }
+    .notificacao { font-size: 14px; }
+}
+
+/* ajustes finos para 1024x600 */
+.dir-nome { white-space: nowrap; }
+.controls .btn-row .dir-btn .lamp { display: none; }
+.dir-btn.dir-ativo .dir-seta { color: var(--green); text-shadow: 0 0 10px rgba(53, 212, 90, 0.6); }
+.controls .hmi-btn.step-btn { font-size: 28px; }
+.timer .info-label { white-space: nowrap; }
+
+@media (max-height: 720px) and (min-width: 701px) {
+    .timer .info-label { font-size: 10px; }
+    .timer .mono { font-size: 18px; }
+}
+
+@media (max-height: 720px) and (min-width: 701px) {
+    .controls .btn-start, .controls .btn-stop { font-size: 14px; letter-spacing: 0; white-space: nowrap; padding: 4px 2px; }
+}
+
+/* ---------- AVISO DE EMERGÊNCIA (tela toda) ---------- */
+
+.emerg {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(40, 0, 0, 0.5);
+    -webkit-backdrop-filter: blur(1.5px);
+    backdrop-filter: blur(1.5px);
+}
+
+body.alarm .emerg { display: flex; }
+
+.emerg-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    max-width: 80vw;
+    padding: 30px 56px 34px;
+    text-align: center;
+    background: rgba(18, 4, 4, 0.9);
+    border: 5px solid var(--red);
+    border-radius: 12px;
+}
+
+@keyframes emergBorda {
+    50% {
+        border-color: #ff8a80;
+        box-shadow: 0 0 80px 10px rgba(229, 57, 53, 0.75);
+    }
+}
+
+.emerg-icone {
+    font-size: 84px;
+    line-height: 1;
+    color: var(--yellow);
+}
+
+.emerg h2 {
+    font-size: 46px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    color: #fff;
+}
+
+/* pisca só enquanto o alarme é novo (TEMPO_PISCANDO_MS no script.js), depois fica fixo */
+.emerg.novo .emerg-box { animation: emergBorda 1s ease-in-out infinite; }
+.emerg.novo .emerg-icone { animation: emergPisca 1s steps(2) infinite; }
+.emerg.novo h2 { animation: emergTexto 1s steps(2) infinite; }
+
+@keyframes emergPisca { 50% { opacity: 0.25; } }
+@keyframes emergTexto { 50% { color: #ff5252; } }
+
+.emerg p {
+    font-size: 21px;
+    line-height: 1.4;
+    color: #ffd6d2;
+}
+
+.emerg-retomar {
+    margin-top: 6px;
+    min-width: 260px;
+    height: 70px;
+    font-size: 24px;
+    letter-spacing: 3px;
+    background: linear-gradient(180deg, #2fbf55, #1f8a3b);
+}
+
+/* os avisos da lateral ficam escondidos durante a emergência */
+body.alarm #notificacoes { display: none; }
+
+/* depois do tempo inicial, o resto da tela também para de piscar */
+body.alarm:not(.alarme-novo) .alarm-frame {
+    animation: none;
+    box-shadow: inset 0 0 70px 12px rgba(229, 57, 53, 0.4);
+}
+body.alarm:not(.alarme-novo) .belt-state.pause,
+body.alarm:not(.alarme-novo) .estop { animation: none; }
+
+/* 7" 1024x600: mais altura para a animação da esteira */
+@media (max-height: 720px) and (min-width: 701px) {
+    .controls { height: 47vh; }
+    .gauge-wrap svg { max-height: 100%; }
+}
+
+/* ---------- BOTÃO DE EMERGÊNCIA DA TELA (cogumelo) ---------- */
+
+.estop,
+.estop:active,
+.estop.engaged {
+    width: clamp(150px, 31vh, 210px);
+    height: clamp(150px, 31vh, 210px);
+    padding: 0;
+    border: 0;
+    outline: none;
+    border-radius: 50%;
+    background: none;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.6);
+    transform: none;
+    animation: none;
+}
+
+.estop svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.estop-titulo {
+    font-size: 19px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    fill: #111;
+}
+
+.estop-sub {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    fill: #3a2a00;
+}
+
+.estop-cogumelo {
+    transform-origin: 100px 100px;
+    transition: transform 0.08s;
+}
+
+/* apertado */
+.estop:active .estop-cogumelo,
+.estop.engaged .estop-cogumelo { transform: scale(0.92); }
+
+.estop.engaged { animation: estopBrilho 0.9s ease-in-out infinite; }
+
+@keyframes estopBrilho {
+    50% { box-shadow: 0 0 40px 6px rgba(229, 57, 53, 0.9); }
+}
+
+body.alarm:not(.alarme-novo) .estop.engaged {
+    animation: none;
+    box-shadow: 0 0 30px 4px rgba(229, 57, 53, 0.7);
+}
+
+@media (max-height: 720px) and (min-width: 701px) {
+    .estop,
+    .estop:active,
+    .estop.engaged { width: clamp(150px, 31vh, 200px); height: clamp(150px, 31vh, 200px); }
+}

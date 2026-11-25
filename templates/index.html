@@ -37,17 +37,9 @@
             </div>
 
             <div class="top-info">
-                <button class="info-box sound-btn" id="btnSom" title="Som do painel">
-                    <span class="info-label">SOM</span>
-                    <span class="info-value mono" id="somTexto">ON</span>
-                </button>
                 <div class="info-box info-serial">
                     <span class="info-label">SERIAL</span>
                     <span class="info-value mono" id="serialMsg">—</span>
-                </div>
-                <div class="info-box">
-                    <span class="info-label">HORA</span>
-                    <span class="info-value mono" id="relogio">--:--:--</span>
                 </div>
                 <div class="info-box">
                     <span class="info-label">CLP / ARDUINO</span>
@@ -141,13 +133,13 @@
                 </div>
 
                 <div class="btn-row">
-                    <button class="hmi-btn manual-only" id="btnEsquerda">
-                        <span class="lamp" id="lampEsquerda"></span>
-                        ◀ ANTI-HORÁRIO
+                    <button class="hmi-btn manual-only dir-btn" id="btnEsquerda">
+                        <span class="dir-seta">◀</span>
+                        <span class="dir-nome"><span class="lamp" id="lampEsquerda"></span>ANTI-HOR.</span>
                     </button>
-                    <button class="hmi-btn manual-only" id="btnDireita">
-                        <span class="lamp lamp-green" id="lampDireita"></span>
-                        HORÁRIO ▶
+                    <button class="hmi-btn manual-only dir-btn" id="btnDireita">
+                        <span class="dir-seta">▶</span>
+                        <span class="dir-nome"><span class="lamp lamp-green" id="lampDireita"></span>HORÁRIO</span>
                     </button>
                 </div>
                 <p class="hint">Disponível apenas com a esteira parada</p>
@@ -184,8 +176,39 @@
                 </div>
 
                 <div class="estop-ring">
-                    <button class="estop" id="btnPause">
-                        <span id="btnPauseText">PAUSAR</span>
+                    <button class="estop" id="btnPause" aria-label="Parada de emergência">
+                        <svg viewBox="0 0 200 200">
+                            <defs>
+                                <radialGradient id="estopCapa" cx="38%" cy="30%" r="75%">
+                                    <stop offset="0" stop-color="#ff8a80"/>
+                                    <stop offset="0.45" stop-color="#e53935"/>
+                                    <stop offset="1" stop-color="#7f1210"/>
+                                </radialGradient>
+                                <radialGradient id="estopPlaca" cx="40%" cy="35%" r="70%">
+                                    <stop offset="0" stop-color="#ffe066"/>
+                                    <stop offset="1" stop-color="#e0a800"/>
+                                </radialGradient>
+                                <path id="estopArcoTopo" d="M 21 100 A 79 79 0 0 1 179 100"/>
+                                <path id="estopArcoBase" d="M 13 100 A 87 87 0 0 0 187 100"/>
+                            </defs>
+
+                            <!-- placa amarela com os textos -->
+                            <circle cx="100" cy="100" r="97" fill="url(#estopPlaca)" stroke="#111" stroke-width="3"/>
+                            <text class="estop-titulo">
+                                <textPath href="#estopArcoTopo" startOffset="50%" text-anchor="middle">EMERGÊNCIA</textPath>
+                            </text>
+                            <text class="estop-sub">
+                                <textPath href="#estopArcoBase" startOffset="50%" text-anchor="middle" id="estopSub">TOQUE PARA PARAR</textPath>
+                            </text>
+
+                            <!-- cogumelo -->
+                            <g class="estop-cogumelo">
+                                <circle cx="100" cy="106" r="58" fill="rgba(0,0,0,0.45)"/>
+                                <circle cx="100" cy="102" r="56" fill="#5a0d0b"/>
+                                <circle cx="100" cy="98" r="55" fill="url(#estopCapa)" stroke="#6b0f0c" stroke-width="2"/>
+                                <ellipse cx="80" cy="76" rx="24" ry="13" fill="rgba(255,255,255,0.32)" transform="rotate(-25 80 76)"/>
+                            </g>
+                        </svg>
                     </button>
                 </div>
             </div>
@@ -196,6 +219,25 @@
 
     <!-- EVENTOS (avisos na lateral) -->
     <div id="notificacoes"></div>
+
+    <!-- AVISO DE EMERGÊNCIA (cobre a tela toda) -->
+    <div class="emerg" id="emergencia">
+        <div class="emerg-box">
+            <div class="emerg-icone">⚠</div>
+            <h2>PARADA DE EMERGÊNCIA</h2>
+            <p id="emergTexto">Esteira parada.</p>
+            <button class="hmi-btn emerg-retomar" id="btnRetomarEmerg">RETOMAR</button>
+        </div>
+    </div>
+
+    <!-- AVISO DE CONEXÃO PERDIDA (bloqueia os comandos) -->
+    <div class="offline" id="offline">
+        <div class="offline-box">
+            <span class="lamp lamp-red"></span>
+            <h2 id="offlineTitulo">ARDUINO DESCONECTADO</h2>
+            <p id="offlineTexto">Verifique o cabo USB. Tentando reconectar...</p>
+        </div>
+    </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 

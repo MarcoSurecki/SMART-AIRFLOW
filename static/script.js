@@ -15,6 +15,11 @@ const estado = {
 
 const $ = (id) => document.getElementById(id);
 const rodando = () => estado.ligada && !estado.pausada;
+// quanto tempo o aviso de emergência fica piscando antes de ficar fixo
+// (use Infinity para piscar o tempo todo)
+const TEMPO_PISCANDO_MS = 15000;
+
+let ultimaAcaoLocal = 0;   // logo após um toque, não deixa a leitura do servidor desfazer
 
 // =====================================================
 // COMUNICAÇÃO
@@ -134,7 +139,10 @@ function registrar(texto, tipo = 'info') {
 
 function atualizarPainel() {
     let modo = 'PARADO', lamp = '', cls = '';
-    if (estado.pausada) { modo = 'PARADA DE EMERGÊNCIA'; lamp = 'lamp-red'; cls = 'pause'; }
+    if (estado.pausada) {
+        modo = estado.origemEmergencia === 'fisico' ? 'EMERGÊNCIA · BOTÃO FÍSICO' : 'PARADA DE EMERGÊNCIA';
+        lamp = 'lamp-red'; cls = 'pause';
+    }
     else if (estado.ligada) { modo = 'CONTÍNUO'; lamp = 'lamp-green'; cls = 'run'; }
 
     $('modo-texto').textContent = estado.pausada ? 'PAUSADO' : modo;
@@ -149,6 +157,8 @@ function atualizarPainel() {
     $('sentido-texto').textContent = horario ? 'HORÁRIO' : 'ANTI-HORÁRIO';
     $('lampDireita').className = 'lamp ' + (horario ? 'lamp-green' : '');
     $('lampEsquerda').className = 'lamp ' + (horario ? '' : 'lamp-green');
+    $('btnDireita').classList.toggle('dir-ativo', horario);
+    $('btnEsquerda').classList.toggle('dir-ativo', !horario);
     document.querySelectorAll('.manual-only')
         .forEach(b => b.disabled = estado.ligada || estado.pausada);
 
@@ -157,10 +167,17 @@ function atualizarPainel() {
     flow.classList.toggle('reverse', !horario);
 
     $('btnPause').classList.toggle('engaged', estado.pausada);
-    $('btnPauseText').textContent = estado.pausada ? 'RETOMAR' : 'PAUSAR';
+    $('estopSub').textContent = estado.pausada ? 'ACIONADO' : 'TOQUE PARA PARAR';
 
     document.body.classList.toggle('running', rodando());
     document.body.classList.toggle('alarm', estado.pausada);
+
+    // aviso de emergência na tela toda
+    const fisico = estado.origemEmergencia === 'fisico';
+    $('emergTexto').textContent = fisico
+        ? 'Botão de emergência acionado na esteira. Destrave o botão (gire o cogumelo) para voltar.'
+        : 'Parada acionada pelo painel. Verifique a esteira antes de retomar.';
+    $('btnRetomarEmerg').style.display = fisico ? 'none' : '';
 
     atualizarZumbido();
 }
@@ -170,6 +187,7 @@ function atualizarPainel() {
 // =====================================================
 
 function girarDireita() {
+    ultimaAcaoLocal = Date.now();
     clique();
     enviar('RIGHT');
     estado.sentido = 1;
@@ -178,6 +196,7 @@ function girarDireita() {
 }
 
 function girarEsquerda() {
+    ultimaAcaoLocal = Date.now();
     clique();
     enviar('LEFT');
     estado.sentido = -1;
@@ -186,6 +205,7 @@ function girarEsquerda() {
 }
 
 function ativarAuto() {
+    ultimaAcaoLocal = Date.now();
     somLigar();
     enviar('AUTO_ON');
     estado.ligada = true;
@@ -196,6 +216,7 @@ function ativarAuto() {
 }
 
 function desativarAuto() {
+    ultimaAcaoLocal = Date.now();
     somDesligar();
     enviar('AUTO_OFF');
     estado.ligada = false;
@@ -205,29 +226,57 @@ function desativarAuto() {
     atualizarPainel();
 }
 
-function togglePause() {
-    if (!estado.pausada) {
+// aplica o estado de emergência na tela (vindo do painel ou do botão físico)
+function aplicarEmergencia(ativa, origem) {
+    if (ativa === estado.pausada) return;
+
+    estado.origemEmergencia = ativa ? origem : '';
+
+    if (ativa) {
         somAlarme();
-        enviar('PAUSE');
         estado.pausada = true;
+
+        // o aviso pisca por TEMPO_PISCANDO_MS, depois fica fixo
+        const aviso = $('emergencia');
+        aviso.classList.add('novo');
+        document.body.classList.add('alarme-novo');
+        clearTimeout(aplicarEmergencia.t);
+        if (Number.isFinite(TEMPO_PISCANDO_MS)) {
+            aplicarEmergencia.t = setTimeout(() => {
+                aviso.classList.remove('novo');
+                document.body.classList.remove('alarme-novo');
+            }, TEMPO_PISCANDO_MS);
+        }
         if (estado.inicioOperacao) {
             estado.acumulado += Date.now() - estado.inicioOperacao;
             estado.inicioOperacao = null;
         }
-        registrar('PARADA DE EMERGÊNCIA acionada', 'err');
+        registrar(origem === 'fisico'
+            ? 'PARADA DE EMERGÊNCIA · botão físico'
+            : 'PARADA DE EMERGÊNCIA acionada', 'err');
     } else {
         clique();
-        enviar('RESUME');
         estado.pausada = false;
         if (estado.ligada) estado.inicioOperacao = Date.now();
-        registrar('Esteira retomada', 'ok');
+        registrar(origem === 'fisico'
+            ? 'Emergência liberada no botão físico'
+            : 'Esteira retomada', 'ok');
     }
     atualizarPainel();
+}
+
+
+function togglePause() {
+    const ativar = !estado.pausada;
+    ultimaAcaoLocal = Date.now();
+    enviar(ativar ? 'PAUSE' : 'RESUME');
+    aplicarEmergencia(ativar, 'painel');
 }
 
 let timerVelocidade = null;
 
 function alterarVelocidade(valor) {
+    ultimaAcaoLocal = Date.now();
     estado.rpm = Number(valor);
     $('rpmValue').textContent = valor;
     moverPonteiro(estado.rpm);
@@ -301,23 +350,27 @@ function moverPonteiro(v) {
 // STATUS / SERIAL / RELÓGIO
 // =====================================================
 
-async function verificarArduino() {
+// mostra a conexão no topo e bloqueia a tela se o Arduino ou o servidor cair
+let falhasServidor = 0;
+let ultimoOnline = null;
+
+function mostrarConexao(online, servidorOk) {
     const el = $('statusArduino');
-    try {
-        const dados = await (await fetch('/status')).json();
-        const online = !!dados.online;
-        if (el.dataset.online !== String(online)) {
-            registrar(online ? 'Arduino conectado' : 'Arduino desconectado', online ? 'ok' : 'err');
-        }
-        el.dataset.online = online;
-        el.className = 'conn ' + (online ? 'ok' : 'fail');
-        el.innerHTML = online
-            ? '<span class="lamp lamp-green"></span> ONLINE'
-            : '<span class="lamp lamp-red"></span> OFFLINE';
-    } catch (e) {
-        el.className = 'conn fail';
-        el.innerHTML = '<span class="lamp lamp-red"></span> SEM SERVIDOR';
+    el.className = 'conn ' + (online ? 'ok' : 'fail');
+    el.innerHTML = online
+        ? '<span class="lamp lamp-green"></span> ONLINE'
+        : `<span class="lamp lamp-red"></span> ${servidorOk ? 'OFFLINE' : 'SEM SERVIDOR'}`;
+
+    if (ultimoOnline !== null && ultimoOnline !== online) {
+        registrar(online ? 'Arduino conectado' : 'Conexão perdida', online ? 'ok' : 'err');
     }
+    ultimoOnline = online;
+
+    $('offlineTitulo').textContent = servidorOk ? 'ARDUINO DESCONECTADO' : 'SERVIDOR FORA DO AR';
+    $('offlineTexto').textContent = servidorOk
+        ? 'Verifique o cabo USB. Tentando reconectar...'
+        : 'O programa do painel parou. Tentando reconectar...';
+    document.body.classList.toggle('sem-conexao', !online);
 }
 
 // ---------------- CONTADOR (sensor no Arduino) ----------------
@@ -326,10 +379,24 @@ let contadorIniciado = false;
 
 async function lerContador() {
     try {
-        const dados = await (await fetch('/contador')).json();
+        const dados = await (await fetch('/estado')).json();
+
+        // sincroniza a emergência com o servidor (botão físico ou outra tela).
+        // Logo após um toque local, espera o servidor registrar o comando.
+        if (Date.now() - ultimaAcaoLocal > 1500 && typeof dados.emergencia === 'boolean') {
+            aplicarEmergencia(dados.emergencia, dados.emergencia_origem || 'fisico');
+            sincronizarEsteira(dados);
+        }
+
+        falhasServidor = 0;
+        mostrarConexao(!!dados.online, true);
+        if (dados.serial) $('serialMsg').textContent = dados.serial;
+
         const total = Number(dados.total) || 0;
 
         if (contadorIniciado && total > S.contagem) {
+            // cada caixa contada pelo sensor aparece na esteira
+            for (let i = 0; i < Math.min(3, total - S.contagem); i++) adicionarCaixa(i);
             S.scanFlash = 1;
             somScan();
             const el = $('contador');
@@ -342,7 +409,35 @@ async function lerContador() {
         S.contagem = total;
         mostrarTotal(total);
         $('contRate').textContent = dados.por_minuto ?? 0;
-    } catch (e) { /* ignora */ }
+    } catch (e) {
+        // só mostra o aviso depois de algumas falhas seguidas (evita piscar)
+        if (++falhasServidor >= 4) mostrarConexao(false, false);
+    }
+}
+
+// aplica na tela o estado guardado no servidor (vale após recarregar a página)
+function sincronizarEsteira(d) {
+    if (typeof d.ligada !== 'boolean') return;
+    let mudou = false;
+
+    if (d.ligada !== estado.ligada) {
+        estado.ligada = d.ligada;
+        estado.inicioOperacao = d.ligada && !estado.pausada ? Date.now() : null;
+        if (!d.ligada) estado.acumulado = 0;
+        mudou = true;
+    }
+    if (d.sentido && d.sentido !== estado.sentido) {
+        estado.sentido = d.sentido;
+        mudou = true;
+    }
+    if (d.rpm && d.rpm !== estado.rpm) {
+        estado.rpm = d.rpm;
+        $('rpmValue').textContent = d.rpm;
+        $('sliderVelocidade').value = d.rpm;
+        moverPonteiro(d.rpm);
+        mudou = true;
+    }
+    if (mudou) atualizarPainel();
 }
 
 function mostrarTotal(total) {
@@ -383,13 +478,6 @@ function zerarContador() {
         .catch(() => registrar('Falha ao zerar o contador', 'err'));
 }
 
-async function lerSerial() {
-    try {
-        const dados = await (await fetch('/data')).json();
-        $('serialMsg').textContent = dados.status || '—';
-    } catch (e) { /* ignora */ }
-}
-
 function formatar(ms) {
     const s = Math.floor(ms / 1000);
     const p = (n) => String(n).padStart(2, '0');
@@ -397,7 +485,6 @@ function formatar(ms) {
 }
 
 function atualizarRelogio() {
-    $('relogio').textContent = hora();
     let ms = estado.acumulado;
     if (estado.inicioOperacao) ms += Date.now() - estado.inicioOperacao;
     $('tempoOperacao').textContent = formatar(ms);
@@ -476,14 +563,14 @@ function layoutCena() {
     S.dpr = window.devicePixelRatio || 1;
     cv.width = Math.round(W * S.dpr);
     cv.height = Math.round(H * S.dpr);
-    // cena projetada para 380 de altura e pelo menos 900 de largura
-    S.s = Math.min(H / 380, W / 900);
+    // cena projetada para ~290 de altura útil (corta o teto vazio) e 900 de largura
+    S.s = Math.min(H / 290, W / 900);
     S.LW = W / S.s;
     S.LH = H / S.s;
-    S.GY = 335 + (S.LH - 380) * 0.55;
+    S.GY = S.LH - 40;   // chão sempre perto da base: esteira ocupa a altura toda
     S.X0 = 30;
     S.X1 = S.LW - 40 - S.D * OX;
-    S.XS = S.X0 + (S.X1 - S.X0) * 0.6;
+    S.XS = S.X0 + S.TUN + 80;   // sensor fixo no início da esteira
     criarCaixas();
     criarPoeira();
 }
@@ -499,17 +586,16 @@ function novaCaixa(b) {
     return b;
 }
 
-const gapCaixa = () => 70 + Math.random() * 110;
-
 function criarCaixas() {
     S.boxes = [];
-    let x = S.X0 + S.TUN + 25;
-    while (x < S.X1 + 150) {
-        const b = novaCaixa({});
-        b.x = x;
-        S.boxes.push(b);
-        x += b.w + gapCaixa();
-    }
+}
+
+// caixa detectada pelo sensor real: surge embaixo do sensor (início da esteira)
+function adicionarCaixa(i = 0) {
+    const b = novaCaixa({});
+    b.x = S.XS - b.w / 2 - i * (b.w + 20) * estado.sentido;
+    S.boxes.push(b);
+    if (S.boxes.length > 12) S.boxes.shift();
 }
 
 function criarPoeira() {
@@ -529,26 +615,8 @@ function criarPoeira() {
 function moverCaixas(dx) {
     for (const b of S.boxes) b.x += dx;
 
-    if (dx > 0) {
-        const limite = S.X1 - S.TUN + 4;
-        for (const b of S.boxes) {
-            if (b.x > limite) {
-                const minX = Math.min(...S.boxes.map(o => o.x));
-                novaCaixa(b);
-                b.x = minX - b.w - gapCaixa();
-            }
-        }
-    } else if (dx < 0) {
-        const limite = S.X0 + S.TUN - 4;
-        for (const b of S.boxes) {
-            if (b.x + b.w < limite) {
-                const maxR = Math.max(...S.boxes.map(o => o.x + o.w));
-                novaCaixa(b);
-                b.x = maxR + gapCaixa();
-            }
-        }
-    }
-
+    // a caixa some quando entra no túnel de saída
+    S.boxes = S.boxes.filter(b => b.x < S.X1 - S.TUN + 4 && b.x + b.w > S.X0 + S.TUN - 4);
 }
 
 // ---------- desenho ----------
@@ -766,7 +834,7 @@ function desenharFrente() {
     }
 
     // setas de fluxo pintadas no trilho
-    const cx = (X0 + S.TUN + XS) / 2;
+    const cx = (X0 + X1) / 2;
     const dir = Math.sign(S.vel) || estado.sentido;
     for (let i = 0; i < 5; i++) {
         const fase = ((S.t * 2.5 - i * 0.25 * dir) % 1 + 1) % 1;
@@ -1075,7 +1143,8 @@ function desenharAlarme() {
     c.fillStyle = `rgba(229,57,53,${0.05 + 0.08 * p})`;
     c.fillRect(0, 0, LW, LH);
 
-    const w = 380, h = 38, x = (LW - w) / 2, y = 54;
+    const fisico = estado.origemEmergencia === 'fisico';
+    const w = 380, h = fisico ? 56 : 38, x = (LW - w) / 2, y = 54;
     c.fillStyle = 'rgba(0,0,0,0.8)';
     c.fillRect(x, y, w, h);
     c.strokeStyle = `rgba(229,57,53,${0.6 + 0.4 * p})`;
@@ -1085,6 +1154,11 @@ function desenharAlarme() {
     c.font = '900 17px "Segoe UI", Arial, sans-serif';
     c.textAlign = 'center';
     c.fillText('⚠  PARADA DE EMERGÊNCIA  ⚠', LW / 2, y + 25);
+    if (fisico) {
+        c.fillStyle = '#ffd0cc';
+        c.font = '700 11px Consolas, monospace';
+        c.fillText('BOTÃO FÍSICO ACIONADO NA ESTEIRA', LW / 2, y + 45);
+    }
     c.textAlign = 'left';
 }
 
@@ -1115,7 +1189,6 @@ function desenharCena(dt) {
     desenharTorreSinal();
 
     desenharLuzes(dt);
-    desenharAlarme();
     desenharVinheta();
 }
 
@@ -1141,7 +1214,9 @@ function quadro(agora) {
     const passando = S.boxes.some(b => b.x < xa + 12 && b.x + b.w > xa - 12) && Math.abs(S.vel) > 1;
     S.cortina += ((passando ? 1 : 0) - S.cortina) * Math.min(1, dt * 6);
 
-    desenharCena(dt);
+    // em emergência a esteira está parada e a tela coberta: desenha só uma vez
+    if (!estado.pausada || !S.desenhouPausado) desenharCena(dt);
+    S.desenhouPausado = estado.pausada;
     requestAnimationFrame(quadro);
 }
 
@@ -1189,6 +1264,7 @@ document.addEventListener('DOMContentLoaded', () => {
     $('btnLigar').addEventListener('click', ativarAuto);
     $('btnDesligar').addEventListener('click', desativarAuto);
     $('btnPause').addEventListener('click', togglePause);
+    $('btnRetomarEmerg').addEventListener('click', togglePause);
     $('sliderVelocidade').addEventListener('input', e => alterarVelocidade(e.target.value));
 
     const passo = (d) => {
@@ -1201,12 +1277,11 @@ document.addEventListener('DOMContentLoaded', () => {
     $('btnMenos').addEventListener('click', () => passo(-1));
     $('btnZerar').addEventListener('click', zerarContador);
     $('btnMais').addEventListener('click', () => passo(1));
-    $('btnSom').addEventListener('click', () => {
-        som.on = !som.on;
-        $('somTexto').textContent = som.on ? 'ON' : 'OFF';
-        if (som.on) clique();
-        atualizarZumbido();
-    });
+
+    // ajustes para a tela de toque
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('dblclick', e => e.preventDefault());
+    if (new URLSearchParams(location.search).has('kiosk')) document.body.classList.add('kiosk');
 
     criarGauge();
 
@@ -1223,13 +1298,9 @@ document.addEventListener('DOMContentLoaded', () => {
     atualizarPainel();
     registrar('Painel iniciado');
 
-    verificarArduino();
-    lerSerial();
     atualizarRelogio();
-    setInterval(verificarArduino, 2000);
-    setInterval(lerSerial, 1000);
     lerContador();
-    setInterval(lerContador, 500);
+    setInterval(lerContador, 300);
     setInterval(atualizarRelogio, 1000);
 
     requestAnimationFrame(quadro);

@@ -1,0 +1,4 @@
+__pycache__/
+venv/
+kiosk/servidor.log
+backup_painel_antigo/

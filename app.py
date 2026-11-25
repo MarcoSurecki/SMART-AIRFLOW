@@ -1,5 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import serial
+from serial.tools import list_ports
+import os
 import threading
 import time
 from collections import deque
@@ -10,8 +12,50 @@ arduino = None
 latest_data = "ESTEIRA INDUSTRIAL"
 connection_status = False
 
-PORTA = "/dev/ttyACM0"
+# A porta é encontrada sozinha (Windows: COMx, Linux: /dev/ttyACMx).
+# Para forçar uma porta: variável de ambiente ESTEIRA_PORTA (ex.: /dev/ttyACM0).
+PORTA_PADRAO = "COM14" if os.name == "nt" else "/dev/ttyACM0"
 BAUDRATE = 9600
+
+# fabricantes comuns de placas Arduino e clones (Arduino, CH340, FTDI, CP210x)
+VIDS_ARDUINO = {0x2341, 0x2A03, 0x1A86, 0x0403, 0x10C4}
+
+
+def encontrar_porta():
+    if os.environ.get("ESTEIRA_PORTA"):
+        return os.environ["ESTEIRA_PORTA"]
+
+    for p in list_ports.comports():
+        if p.vid in VIDS_ARDUINO or "arduino" in (p.description or "").lower():
+            return p.device
+
+    return PORTA_PADRAO
+
+
+# ---------------- ESTADO DA ESTEIRA ----------------
+# Fica no servidor para a tela mostrar o estado real mesmo depois
+# de recarregar a página. O Arduino reinicia quando a serial é aberta,
+# então ao conectar tudo volta ao padrão do firmware.
+
+esteira = {"ligada": False, "sentido": 1, "rpm": 10}
+
+
+def estado_inicial_esteira():
+    esteira.update(ligada=False, sentido=1, rpm=10)
+
+
+def registrar_comando(cmd):
+    if cmd == "AUTO_ON" and not emergencia:
+        esteira["ligada"] = True
+    elif cmd == "AUTO_OFF":
+        esteira["ligada"] = False
+    elif cmd in ("RIGHT", "LEFT") and not esteira["ligada"]:
+        esteira["sentido"] = 1 if cmd == "RIGHT" else -1
+    elif cmd.startswith("SPD_"):
+        try:
+            esteira["rpm"] = max(5, min(20, int(cmd[4:])))
+        except ValueError:
+            pass
 
 # ---------------- CONTADOR DE CAIXAS ----------------
 # O Arduino envia a linha "CAIXA" a cada caixa detectada pelo sensor.
@@ -28,13 +72,38 @@ def registrar_caixa():
         horarios_caixas.append(time.time())
 
 
+# ---------------- PARADA DE EMERGÊNCIA ----------------
+# Pode vir do painel (comandos PAUSE / RESUME) ou do botão físico
+# no Arduino, que envia "EMERGENCIA" ao ser acionado e, se houver
+# rearme físico, "EMERGENCIA_OFF".
+
+MSG_EMERGENCIA = {"EMERGENCIA", "EMERGENCIA_ON", "ESTOP", "ESTOP_ON"}
+MSG_LIBERADA = {"EMERGENCIA_OFF", "ESTOP_OFF", "RETOMADO"}
+
+emergencia = False
+emergencia_origem = ""          # "painel" ou "fisico"
+
+
+def definir_emergencia(ativa, origem):
+    global emergencia, emergencia_origem
+    if ativa != emergencia:
+        print(f"Emergência {'ACIONADA' if ativa else 'liberada'} ({origem})")
+    emergencia = ativa
+    emergencia_origem = origem
+
+
 def conectar_arduino():
     global arduino, connection_status
 
+    porta = encontrar_porta()
+
     try:
-        arduino = serial.Serial(PORTA, BAUDRATE, timeout=1)
+        arduino = serial.Serial(porta, BAUDRATE, timeout=1)
         connection_status = True
-        print(f"Arduino conectado em {PORTA}")
+        # o Arduino reinicia ao abrir a serial: volta tudo ao padrão
+        estado_inicial_esteira()
+        definir_emergencia(False, "")
+        print(f"Arduino conectado em {porta}")
         return True
 
     except Exception as e:
@@ -69,10 +138,24 @@ def monitor_serial():
 
                 connection_status = True
 
-                if linha.upper() == "CAIXA":
+                msg = linha.upper()
+
+                if msg == "CAIXA":
                     registrar_caixa()
-                else:
-                    latest_data = linha
+                    continue
+
+                if msg in MSG_EMERGENCIA:
+                    definir_emergencia(True, "fisico")
+                elif msg in MSG_LIBERADA:
+                    definir_emergencia(False, "fisico")
+                elif msg.startswith("EMERGENCIA DESTRAVADA"):
+                    # botão físico destravado: se a parada veio dele,
+                    # libera a tela e manda o Arduino retomar o motor
+                    if emergencia and emergencia_origem == "fisico":
+                        definir_emergencia(False, "fisico")
+                        arduino.write(b"RESUME\n")
+
+                latest_data = linha
 
         except Exception as e:
 
@@ -106,9 +189,15 @@ def comando():
 
     global connection_status
 
-    cmd = request.form.get('cmd')
+    cmd = (request.form.get('cmd') or '').strip().upper()
 
     print("Comando:", cmd)
+
+    # o estado de emergência do painel vale mesmo com o Arduino offline
+    if cmd == "PAUSE":
+        definir_emergencia(True, "painel")
+    elif cmd == "RESUME":
+        definir_emergencia(False, "painel")
 
     try:
 
@@ -117,6 +206,9 @@ def comando():
             arduino.write(
                 (cmd + '\n').encode()
             )
+
+            # só guarda o estado se o comando chegou ao Arduino
+            registrar_comando(cmd)
 
             return 'OK'
 
@@ -134,6 +226,31 @@ def status():
 
     return jsonify({
         "online": connection_status
+    })
+
+
+@app.route('/estado')
+def estado():
+    """Estado consultado pela tela várias vezes por segundo."""
+
+    agora = time.time()
+
+    with trava_contador:
+        while horarios_caixas and agora - horarios_caixas[0] > 60:
+            horarios_caixas.popleft()
+        total = total_caixas
+        por_minuto = len(horarios_caixas)
+
+    return jsonify({
+        "online": connection_status,
+        "emergencia": emergencia,
+        "emergencia_origem": emergencia_origem,
+        "ligada": esteira["ligada"],
+        "sentido": esteira["sentido"],
+        "rpm": esteira["rpm"],
+        "serial": latest_data,
+        "total": total,
+        "por_minuto": por_minuto
     })
 
 
@@ -177,7 +294,7 @@ if __name__ == '__main__':
 
     app.run(
         host='0.0.0.0',
-        port=5000,
+        port=5001,
         debug=False,
         threaded=True
     )
