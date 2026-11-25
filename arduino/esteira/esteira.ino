@@ -18,9 +18,10 @@
      Se usar o contato NF (falha segura: fio rompido = emergência),
      troque EMERGENCIA_CONTATO_NF para true.
 
-   Sensor de caixas (infravermelho tipo FC-51 / E18-D80NK)
-     OUT -> pino 4, VCC -> 5V, GND -> GND.
-     Sem sensor ligado, nada é contado.
+   Sensor de caixas (ultrassônico HC-SR04)
+     VCC -> 5V, TRIG -> pino 4, ECHO -> pino 2, GND -> GND.
+     Conta uma caixa quando algo chega a menos de DIST_DETECTA_CM
+     do sensor. Sem sensor ligado, nada é contado.
 
    PROTOCOLO SERIAL (9600 baud, uma mensagem por linha)
    ---------------------------------------------------
@@ -45,10 +46,15 @@
 
 const byte PINOS_MOTOR[4] = {8, 9, 10, 11};
 const byte PINO_EMERGENCIA = 13;
-const byte PINO_SENSOR = 4;
+const byte PINO_TRIG = 4;
+const byte PINO_ECHO = 2;                  // pino 2 tem interrupção: mede o eco sem travar o motor
 
 const bool EMERGENCIA_CONTATO_NF = false;  // true = contato NF, false = contato NA (atual)
-const bool SENSOR_ATIVO_EM_LOW = true;     // FC-51 / E18-D80NK vão para LOW ao detectar
+
+// distância da caixa ao sensor: ajuste conforme a largura da esteira
+const int DIST_DETECTA_CM = 8;             // mais perto que isso = caixa na frente
+const int DIST_LIBERA_CM = 12;             // mais longe que isso = caixa já passou
+const unsigned long INTERVALO_MEDIDA_MS = 60;  // HC-SR04 precisa de ~60 ms entre medidas
 const bool INVERTER_SENTIDO = false;       // troque se "horário" girar ao contrário
 
 const long PASSOS_POR_VOLTA = 2048;        // 28BYJ-48 em passo completo
@@ -83,6 +89,12 @@ unsigned long mudancaBotaoMs = 0;
 
 bool caixaPresente = false;
 unsigned long ultimaCaixaMs = 0;
+unsigned long ultimaMedidaMs = 0;
+int distanciaCm = -1;                 // última distância medida (-1 = sem leitura)
+
+volatile unsigned long inicioEcoUs = 0;
+volatile unsigned long duracaoEcoUs = 0;
+volatile bool ecoNovo = false;
 
 char bufferSerial[24];
 byte tamanhoBuffer = 0;
@@ -168,16 +180,49 @@ void atualizarBotaoEmergencia() {
 
 // ---------------- SENSOR DE CAIXAS ----------------
 
-void atualizarSensor() {
-  bool nivelBaixo = digitalRead(PINO_SENSOR) == LOW;
-  bool detectando = SENSOR_ATIVO_EM_LOW ? nivelBaixo : !nivelBaixo;
-
-  // conta só quando a caixa chega (borda), não enquanto ela está passando
-  if (detectando && !caixaPresente && millis() - ultimaCaixaMs > TEMPO_MIN_ENTRE_CAIXAS_MS) {
-    ultimaCaixaMs = millis();
-    Serial.println("CAIXA");
+// chamada pela interrupção a cada mudança no pino ECHO
+void medirEco() {
+  if (digitalRead(PINO_ECHO) == HIGH) {
+    inicioEcoUs = micros();
+  } else {
+    duracaoEcoUs = micros() - inicioEcoUs;
+    ecoNovo = true;
   }
-  caixaPresente = detectando;
+}
+
+void dispararSensor() {
+  digitalWrite(PINO_TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(PINO_TRIG, LOW);
+}
+
+void atualizarSensor() {
+  if (ecoNovo) {
+    noInterrupts();
+    unsigned long duracao = duracaoEcoUs;
+    ecoNovo = false;
+    interrupts();
+
+    // sem objeto o HC-SR04 devolve um eco longo (~38 ms): trata como "longe"
+    distanciaCm = (duracao > 0 && duracao < 30000UL) ? (int)(duracao / 58) : 999;
+
+    // histerese: entra abaixo de DIST_DETECTA_CM e só sai acima de DIST_LIBERA_CM
+    if (!caixaPresente && distanciaCm > 0 && distanciaCm < DIST_DETECTA_CM) {
+      caixaPresente = true;
+      // conta só quando a caixa chega, não enquanto ela está passando
+      if (millis() - ultimaCaixaMs > TEMPO_MIN_ENTRE_CAIXAS_MS) {
+        ultimaCaixaMs = millis();
+        Serial.println("CAIXA");
+      }
+    } else if (caixaPresente && distanciaCm > DIST_LIBERA_CM) {
+      caixaPresente = false;
+    }
+  }
+
+  if (millis() - ultimaMedidaMs >= INTERVALO_MEDIDA_MS) {
+    ultimaMedidaMs = millis();
+    dispararSensor();
+  }
 }
 
 // ---------------- COMANDOS ----------------
@@ -247,6 +292,8 @@ void executarComando(const char *cmd) {
     Serial.print(botaoTravado);
     Serial.print(" pino13=");
     Serial.print(digitalRead(PINO_EMERGENCIA));
+    Serial.print(" distancia_cm=");
+    Serial.print(distanciaCm);
     Serial.print(" rpm=");
     Serial.print(rpm);
     Serial.print(" sentido=");
@@ -286,7 +333,10 @@ void setup() {
   desligarBobinas();
 
   pinMode(PINO_EMERGENCIA, INPUT_PULLUP);
-  pinMode(PINO_SENSOR, INPUT_PULLUP);
+  pinMode(PINO_TRIG, OUTPUT);
+  digitalWrite(PINO_TRIG, LOW);
+  pinMode(PINO_ECHO, INPUT);
+  attachInterrupt(digitalPinToInterrupt(PINO_ECHO), medirEco, CHANGE);
 
   calcularIntervalo();
 
