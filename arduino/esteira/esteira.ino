@@ -13,10 +13,10 @@
 
    Botão de emergência (cogumelo com trava)
      Contato entre o pino 13 e o GND (o pino usa o pull-up interno).
-     Contato NF (normalmente fechado): solto = pino no GND, apertado =
-     contato abre (o LED "L" da placa acende). Se o fio romper, a
-     esteira entra em emergência (falha segura).
-     Se usar um contato NA, troque EMERGENCIA_CONTATO_NF para false.
+     Contato NA (normalmente aberto, atual): solto = pino em HIGH,
+     apertado = contato fecha e o pino vai para o GND.
+     Se usar o contato NF (falha segura: fio rompido = emergência),
+     troque EMERGENCIA_CONTATO_NF para true.
 
    Sensor de caixas (infravermelho tipo FC-51 / E18-D80NK)
      OUT -> pino 4, VCC -> 5V, GND -> GND.
@@ -47,7 +47,7 @@ const byte PINOS_MOTOR[4] = {8, 9, 10, 11};
 const byte PINO_EMERGENCIA = 13;
 const byte PINO_SENSOR = 4;
 
-const bool EMERGENCIA_CONTATO_NF = true;   // true = contato NF (atual), false = contato NA
+const bool EMERGENCIA_CONTATO_NF = false;  // true = contato NF, false = contato NA (atual)
 const bool SENSOR_ATIVO_EM_LOW = true;     // FC-51 / E18-D80NK vão para LOW ao detectar
 const bool INVERTER_SENTIDO = false;       // troque se "horário" girar ao contrário
 
