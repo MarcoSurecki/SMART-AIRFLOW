@@ -1,6 +1,6 @@
 /*
   =====================================================================
-   ESTEIRA INDUSTRIAL · Firmware do Arduino Uno
+   ESTEIRA INDUSTRIAL A3
   =====================================================================
 
    LIGAÇÕES
@@ -16,8 +16,7 @@
      travado = contato abre e o pino vai para HIGH. Fio rompido =
      emergência (falha segura). Conferido na placa: solto pino13=0,
      travado pino13=1.
-     Se usar um contato NA, troque EMERGENCIA_CONTATO_NF para false.
-
+     
    Sensor de caixas (ultrassônico HC-SR04)
      VCC -> 5V, TRIG -> pino 4, ECHO -> pino 2, GND -> GND.
      Conta uma caixa quando algo chega a menos de DIST_DETECTA_CM
